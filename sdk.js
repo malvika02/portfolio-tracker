@@ -46,7 +46,7 @@ async function fetchTokenBalances(walletAddress) {
     const nonZeroBalances = tokenBalances.tokenBalances.filter(token => BigInt(token.tokenBalance) > 0n);
 
     // Fetch metadata and convert balances for each token with a non-zero balance
-    const tokensWithMetadataAndPrice = await Promise.all(
+    let tokensWithMetadataAndPrice = await Promise.all(
       nonZeroBalances.map(async (token) => {
         const metadata = await alchemy.core.getTokenMetadata(token.contractAddress);
         const readableBalance = convertToReadableBalance(token.tokenBalance, metadata.decimals);
@@ -62,10 +62,14 @@ async function fetchTokenBalances(walletAddress) {
       })
     );
 
-    // Calculate the total balance in USD
-    let totalBalanceUsd = tokensWithMetadataAndPrice.reduce((acc, token) => {
-      return acc + (token.priceUsd ? parseFloat(token.tokenBalance) * parseFloat(token.priceUsd) : 0);
+    // Filter out tokens where the price is not available
+    tokensWithMetadataAndPrice = tokensWithMetadataAndPrice.filter(token => token.priceUsd !== null);
+
+    // Calculate the total balance in USD for tokens with available prices
+    const totalBalanceUsd = tokensWithMetadataAndPrice.reduce((acc, token) => {
+      return acc + (token.price ? parseFloat(token.tokenBalance) * parseFloat(token.priceUsd) : 0);
     }, 0);
+
     // Log the tokens with metadata and readable balances
     tokensWithMetadataAndPrice.forEach(token => {
       console.log(`Token: ${token.name}`);
