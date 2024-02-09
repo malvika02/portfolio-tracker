@@ -1,0 +1,19 @@
+{
+  "name": "sdk-tx-history",
+  "version": "1.0.0",
+  "description": "",
+  "main": "sdk.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "alchemy-sdk": "^3.1.2",
+    "dotenv": "^16.4.1",
+    "node-fetch": "^3.3.2"
+    
+  }
+}
