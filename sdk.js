@@ -1,5 +1,6 @@
 import { Alchemy, Network } from 'alchemy-sdk';
 import dotenv from 'dotenv';
+import readline from 'readline';
 dotenv.config();
 
 const config = {
@@ -55,7 +56,26 @@ async function fetchTokenBalances(walletAddress) {
   }
 }
 
-// Example usage
-const walletAddress = '0x2a82ae142b2e62cb7d10b55e323acb1cab663a26'; // Replace with the wallet address you want to query
-fetchTokenBalances(walletAddress)
-  .catch(console.error);
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
+
+// Prompt the user for the wallet address
+rl.question('Please provide a wallet address: ', (walletAddress) => {
+  if (!walletAddress) {
+    console.error('No wallet address was provided.');
+    rl.close();
+    process.exit(1);
+  }
+
+  // Example usage with provided wallet address
+  fetchTokenBalances(walletAddress)
+    .then(() => {
+      rl.close(); // Close the readline interface after the operation
+    })
+    .catch((error) => {
+      console.error(error);
+      rl.close(); // Close the readline interface after the operation
+    });
+});
