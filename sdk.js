@@ -1,6 +1,7 @@
 import { Alchemy, Network } from 'alchemy-sdk';
 import dotenv from 'dotenv';
 import readline from 'readline';
+import fetch from 'node-fetch';
 dotenv.config();
 
 const config = {
@@ -20,6 +21,22 @@ function convertToReadableBalance(hexBalance, decimals = 18) {
   return decimalBalance / BigInt(10 ** decimals);
 }
 
+// Function to fetch the price of a token using DexScreener API
+async function fetchTokenPrice(contractAddress) {
+  try {
+    const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${contractAddress}`);
+    const data = await response.json();
+    if (data && data.pairs && data.pairs.length > 0) {
+      // Assuming we take the price from the first pair
+      return data.pairs[0].priceUsd;
+    }
+    return null;
+  } catch (error) {
+    console.error(`Error fetching price for contract ${contractAddress}:`, error);
+    return null;
+  }
+}
+
 async function fetchTokenBalances(walletAddress) {
   try {
     // Fetch all token balances for the wallet address
@@ -29,27 +46,40 @@ async function fetchTokenBalances(walletAddress) {
     const nonZeroBalances = tokenBalances.tokenBalances.filter(token => BigInt(token.tokenBalance) > 0n);
 
     // Fetch metadata and convert balances for each token with a non-zero balance
-    const tokensWithMetadata = await Promise.all(
+    const tokensWithMetadataAndPrice = await Promise.all(
       nonZeroBalances.map(async (token) => {
         const metadata = await alchemy.core.getTokenMetadata(token.contractAddress);
         const readableBalance = convertToReadableBalance(token.tokenBalance, metadata.decimals);
+        const priceUsd = await fetchTokenPrice(token.contractAddress);
         return {
           contractAddress: token.contractAddress,
           tokenBalance: readableBalance.toString(), // Convert to string for readability
           name: metadata.name,
+          symbol:metadata.symbol,
+          decimals: metadata.decimals,
+          priceUsd: priceUsd
         };
       })
     );
 
+    // Calculate the total balance in USD
+    let totalBalanceUsd = tokensWithMetadataAndPrice.reduce((acc, token) => {
+      return acc + (token.priceUsd ? parseFloat(token.tokenBalance) * parseFloat(token.priceUsd) : 0);
+    }, 0);
     // Log the tokens with metadata and readable balances
-    tokensWithMetadata.forEach(token => {
+    tokensWithMetadataAndPrice.forEach(token => {
       console.log(`Token: ${token.name}`);
       console.log(`Token Balance: ${token.tokenBalance}`);
+      console.log(`Token Price (USD): ${token.priceUsd || 'Price not available'}`);
       console.log(`Contract Address: ${token.contractAddress}`);
       console.log('-----------------------------');
     });
 
-    return tokensWithMetadata;
+    // Log the total balance
+    console.log(`Total Balance for wallet ${walletAddress} in Usd: ${totalBalanceUsd.toFixed(2)}`);
+
+
+    return tokensWithMetadataAndPrice;
   } catch (error) {
     console.error('Error fetching token balances:', error);
     throw error;
