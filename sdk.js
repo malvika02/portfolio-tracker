@@ -68,11 +68,11 @@ async function fetchTokenBalances(walletAddress) {
     )).filter(token => token !== null);
 
     // Filter out tokens where the price is not available
-    tokensWithMetadataAndPrice = tokensWithMetadataAndPrice.filter(token => token.priceUsd !== null);
+    // tokensWithMetadataAndPrice = tokensWithMetadataAndPrice.filter(token => token.priceUsd !== null);
 
     // Calculate the total balance in USD for tokens with available prices
     const totalBalanceUsd = tokensWithMetadataAndPrice.reduce((acc, token) => {
-      return acc + (token.price ? parseFloat(token.tokenBalance) * parseFloat(token.priceUsd) : 0);
+      return acc + (token.priceUsd ? parseFloat(token.tokenBalance) * parseFloat(token.priceUsd) : 0);
     }, 0);
 
     // Log the tokens with metadata and readable balances
