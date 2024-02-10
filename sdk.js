@@ -6,7 +6,7 @@ dotenv.config();
 
 const config = {
   apiKey: process.env.ALCHEMY_API_KEY, // Your Alchemy API key
-  network: Network.ETH_MAINNET, // The network you want to use
+  network: Network.ETH_MAINNET, // The network want to use
 };
 const alchemy = new Alchemy(config);
 
@@ -26,7 +26,7 @@ async function fetchTokenPrice(contractAddress) {
   try {
     const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${contractAddress}`);
     const data = await response.json();
-    if (data && data.pairs && data.pairs.length > 0) {
+    if (data && data.pairs && data.pairs.length > 0 && data.pairs[0].priceUsd) {
       // Assuming we take the price from the first pair
       return data.pairs[0].priceUsd;
     }
@@ -43,24 +43,29 @@ async function fetchTokenBalances(walletAddress) {
     const tokenBalances = await alchemy.core.getTokenBalances(walletAddress);
 
     // Filter out tokens with zero balance
-    const nonZeroBalances = tokenBalances.tokenBalances.filter(token => BigInt(token.tokenBalance) > 0n);
+    // const nonZeroBalances = tokenBalances.tokenBalances.filter(token => BigInt(token.tokenBalance) > 0n);
 
     // Fetch metadata and convert balances for each token with a non-zero balance
-    let tokensWithMetadataAndPrice = await Promise.all(
-      nonZeroBalances.map(async (token) => {
+    let tokensWithMetadataAndPrice = (await Promise.all(
+      tokenBalances.tokenBalances.map(async (token) => {
         const metadata = await alchemy.core.getTokenMetadata(token.contractAddress);
         const readableBalance = convertToReadableBalance(token.tokenBalance, metadata.decimals);
-        const priceUsd = await fetchTokenPrice(token.contractAddress);
-        return {
-          contractAddress: token.contractAddress,
-          tokenBalance: readableBalance.toString(), // Convert to string for readability
-          name: metadata.name,
-          symbol:metadata.symbol,
-          decimals: metadata.decimals,
-          priceUsd: priceUsd
-        };
+        if(readableBalance > 0){
+          const priceUsd = await fetchTokenPrice(token.contractAddress);
+          if(priceUsd){
+            return {
+              contractAddress: token.contractAddress,
+              tokenBalance: readableBalance.toString(), // Convert to string for readability
+              name: metadata.name,
+              symbol:metadata.symbol,
+              decimals: metadata.decimals,
+              priceUsd: priceUsd
+            };
+          }
+        }
+        return null;
       })
-    );
+    )).filter(token => token !== null);
 
     // Filter out tokens where the price is not available
     tokensWithMetadataAndPrice = tokensWithMetadataAndPrice.filter(token => token.priceUsd !== null);
