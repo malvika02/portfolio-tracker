@@ -99,7 +99,31 @@ async function fetchTokenBalances(walletAddress) {
     throw error;
   }
 }
-export {fetchTokenBalances};
+
+// List of wallet addresses to fetch balances for
+const walletAddresses = [
+  '0x28C6c06298d514Db089934071355E5743bf21d60',
+  '0xf89d7b9c864f589bbF53a82105107622B35EaA40',
+  '0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5',
+  // ... add more addresses up to 10
+];
+
+async function fetchBalancesForMultipleWallets(walletAddresses) {
+  for (const address of walletAddresses) {
+    console.log(`Fetching balances for wallet: ${address}`);
+    const balances = await fetchTokenBalances(address);
+    // Here you can handle the balances as needed, e.g., log them or store them
+    console.log(balances);
+  }
+}
+
+// Start fetching balances for the list of addresses
+fetchBalancesForMultipleWallets(walletAddresses)
+  .then(() => console.log('Finished fetching balances for all wallets'))
+  .catch(error => console.error('Error fetching balances for wallets', error));
+
+export { fetchTokenBalances, fetchBalancesForMultipleWallets };
+
 
 const rl = readline.createInterface({
   input: process.stdin,
