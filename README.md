@@ -32,13 +32,16 @@ Before you begin, ensure you have met the following requirements:
 To install the necessary dependencies, run the following command:
 
 1. Clone the repository to your local machine:
-    git clone https://github.com/malvika02/portfolio-tracker
+    `bash`
+        git clone https://github.com/malvika02/portfolio-tracker
 
 2. Navigate to the project directory:
-    cd portfolio-tracker
+    `bash`
+        cd portfolio-tracker
 
 3. Install the necessary dependencies:
-    npm install
+    `bash`
+        npm install
 
 After running this command, npm will automatically install all the dependencies defined in `package.json`, and you should be ready to run the project locally.
 
