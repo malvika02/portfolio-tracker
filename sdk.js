@@ -67,6 +67,11 @@ async function fetchTokenBalances(walletAddress) {
       })
     )).filter(token => token !== null);
 
+    //  // Optionally filter out tokens without a price
+    //  if (!includeTokensWithoutPrice) {
+    //   tokensWithMetadata = tokensWithMetadata.filter(token => token.priceUsd !== null);
+    // }
+
     // Filter out tokens where the price is not available
     // tokensWithMetadataAndPrice = tokensWithMetadataAndPrice.filter(token => token.priceUsd !== null);
 
@@ -94,6 +99,7 @@ async function fetchTokenBalances(walletAddress) {
     throw error;
   }
 }
+export {fetchTokenBalances};
 
 const rl = readline.createInterface({
   input: process.stdin,
