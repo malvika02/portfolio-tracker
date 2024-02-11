@@ -2,6 +2,7 @@ import { Alchemy, Network } from 'alchemy-sdk';
 import dotenv from 'dotenv';
 import readline from 'readline';
 import fetch from 'node-fetch';
+import fs from 'fs'
 dotenv.config();
 
 const config = {
@@ -105,46 +106,77 @@ const walletAddresses = [
   '0x28C6c06298d514Db089934071355E5743bf21d60',
   '0xf89d7b9c864f589bbF53a82105107622B35EaA40',
   '0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5',
-  // ... add more addresses up to 10
+  // ... can add more addresses
 ];
 
 async function fetchBalancesForMultipleWallets(walletAddresses) {
+  const allBalances = [];
   for (const address of walletAddresses) {
     console.log(`Fetching balances for wallet: ${address}`);
-    const balances = await fetchTokenBalances(address);
-    // Here you can handle the balances as needed, e.g., log them or store them
-    console.log(balances);
+    try {
+      const balances = await fetchTokenBalances(address);
+      allBalances.push({ address, balances });
+    } catch (error) {
+      console.error(`Error fetching balances for wallet ${address}:`, error);
+      allBalances.push({ address, error: error.message });
+    }
   }
+
+  // Write the results to a JSON file
+  fs.writeFile('balances.json', JSON.stringify(allBalances, null, 2), (err) => {
+    if (err) {
+      console.error('Error writing to file:', err);
+    } else {
+      console.log('Finished writing balances to balances.json');
+    }
+  });
 }
-
-// Start fetching balances for the list of addresses
-fetchBalancesForMultipleWallets(walletAddresses)
-  .then(() => console.log('Finished fetching balances for all wallets'))
-  .catch(error => console.error('Error fetching balances for wallets', error));
-
-export { fetchTokenBalances, fetchBalancesForMultipleWallets };
-
 
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
 });
 
-// Prompt the user for the wallet address
-rl.question('Please provide a wallet address: ', (walletAddress) => {
-  if (!walletAddress) {
-    console.error('No wallet address was provided.');
-    rl.close();
-    process.exit(1);
+async function promptForAddressAndFetchBalances() {
+  for await (const walletAddress of askForWalletAddress()) {
+    await fetchTokenBalances(walletAddress);
   }
+  // After the above is done, fetch balances for predefined wallet addresses
+  await fetchBalancesForPredefinedAddresses();
+}
 
-  // Example usage with provided wallet address
-  fetchTokenBalances(walletAddress)
-    .then(() => {
-      rl.close(); // Close the readline interface after the operation
-    })
-    .catch((error) => {
-      console.error(error);
-      rl.close(); // Close the readline interface after the operation
+async function* askForWalletAddress() {
+  yield new Promise((resolve) => {
+    rl.question('Please provide a wallet address: ', (walletAddress) => {
+      if (!walletAddress) {
+        console.error('No wallet address was provided.');
+        rl.close();
+        process.exit(1);
+      }
+      resolve(walletAddress);
     });
-});
+  });
+}
+
+async function fetchBalancesForPredefinedAddresses() {
+  console.log('Fetching balances for predefined wallet addresses...');
+  for (const address of walletAddresses) {
+    console.log(`Fetching balances for wallet: ${address}`);
+    await fetchTokenBalances(address);
+  }
+}
+
+// Start the process by prompting for a wallet address
+promptForAddressAndFetchBalances()
+  .then(() => {
+    console.log('Finished fetching balances for all wallets');
+    rl.close();
+    process.exit(0); // Exit the process when done
+  })
+  .catch(error => {
+    console.error('Error during balance fetching process', error);
+    rl.close();
+    process.exit(1); // Exit the process on error
+  });
+
+export { fetchTokenBalances, fetchBalancesForMultipleWallets };
