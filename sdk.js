@@ -71,31 +71,7 @@ async function fetchTokenBalances(walletAddress) {
     // Filter out tokens where the price is not available
     // tokensWithMetadataAndPrice = tokensWithMetadataAndPrice.filter(token => token.priceUsd !== null);
     
-    // Function to fetch the latest transaction for a given wallet address
-    async function fetchLatestTransaction(walletAddress) {
-      try {
-        const transfers = await alchemy.core.getAssetTransfers({
-          fromBlock: '0x0',
-          toBlock: 'latest',
-          fromAddress: walletAddress,
-          maxCount: '0x1', // Only fetches the latest transaction
-          category: ['external'], // Filter for external transactions only
-          order: 'desc', // Order by latest
-        });
-    
-        if (transfers.transfers && transfers.transfers.length > 0) {
-          return transfers.transfers[0]; // Returns the latest transaction
-        } else {
-          return null; // No transactions found
-        }
-      } catch (error) {
-        console.error(`Error fetching latest transaction for wallet ${walletAddress}:`, error);
-        return null;
-      }
-    }
-   
-
-    // Calculate the total balance in USD for tokens with available prices
+   // Calculate the total balance in USD for tokens with available prices
     const totalBalanceUsd = tokensWithMetadataAndPrice.reduce((acc, token) => {
       return acc + (token.priceUsd ? parseFloat(token.tokenBalance) * parseFloat(token.priceUsd) : 0);
     }, 0);
@@ -159,12 +135,10 @@ const rl = readline.createInterface({
 async function promptForAddressAndFetchBalances() {
   for await (const walletAddress of askForWalletAddress()) {
     await fetchTokenBalances(walletAddress);
-    const latestTransaction = await fetchLatestTransaction(walletAddress);
-    console.log(`Latest transaction for ${walletAddress}:`, latestTransaction);
   }
   
   // After the above is done, fetch balances for predefined wallet addresses
-  await fetchBalancesAndTransactionsForPredefinedAddresses();
+  await fetchBalancesForPredefinedAddresses();
 }
 
 async function* askForWalletAddress() {
@@ -180,13 +154,11 @@ async function* askForWalletAddress() {
   });
 }
 
-async function fetchBalancesAndTransactionsForPredefinedAddresses() {
+async function fetchBalancesForPredefinedAddresses() {
   console.log('Fetching balances and latest transactions for predefined wallet addresses...');
   for (const address of walletAddresses) {
     console.log(`Fetching balances for wallet: ${address}`);
     await fetchTokenBalances(address);
-    const latestTransaction = await fetchLatestTransaction(address);
-    console.log(`Latest transaction for ${address}:`, latestTransaction);
   
   }
 }
@@ -204,4 +176,4 @@ promptForAddressAndFetchBalances()
     process.exit(1); // Exit the process on error
   });
 
-export { fetchTokenBalances, fetchBalancesForMultipleWallets, fetchLatestTransaction};
+export { fetchTokenBalances, fetchBalancesForMultipleWallets};
