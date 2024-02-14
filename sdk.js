@@ -68,6 +68,9 @@ async function fetchTokenBalances(walletAddress) {
       })
     )).filter(token => token !== null);
 
+    // Print the length of the json
+    console.log(`Number of tokens: ${tokensWithMetadataAndPrice.length}`);
+
     // Filter out tokens where the price is not available
     // tokensWithMetadataAndPrice = tokensWithMetadataAndPrice.filter(token => token.priceUsd !== null);
     
@@ -88,6 +91,8 @@ async function fetchTokenBalances(walletAddress) {
     // Log the total balance
     console.log(`Total Balance for wallet ${walletAddress} in Usd: ${totalBalanceUsd.toFixed(2)}`);
 
+    
+
 
     return tokensWithMetadataAndPrice;
   } catch (error) {
@@ -99,8 +104,8 @@ async function fetchTokenBalances(walletAddress) {
 // List of wallet addresses to fetch balances for
 const walletAddresses = [
   '0x28C6c06298d514Db089934071355E5743bf21d60',
-  '0xf89d7b9c864f589bbF53a82105107622B35EaA40',
-  '0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5',
+  // '0xf89d7b9c864f589bbF53a82105107622B35EaA40',
+  // '0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5',
   // ... can add more addresses
 ];
 
