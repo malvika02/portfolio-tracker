@@ -46,9 +46,17 @@ async function fetchTokenBalances(walletAddress) {
     // Filter out tokens with zero balance
     // const nonZeroBalances = tokenBalances.tokenBalances.filter(token => BigInt(token.tokenBalance) > 0n);
     
+    // Initialize tokensWithMetadataAndPrice before using it
+     // Initialize tokensWithMetadataAndPrice before using it
+     
+
     // Log the total number of tokens before filtering
     console.log(`Total number of tokens before filtering: ${tokenBalances.tokenBalances.length}`);
     
+    // Print the length of the json
+    console.log(`Number of tokens with available price: ${tokensWithMetadataAndPrice.length}`);
+
+
     // Fetch metadata and convert balances for each token with a non-zero balance
     let tokensWithMetadataAndPrice = (await Promise.all(
       tokenBalances.tokenBalances.map(async (token) => {
@@ -70,9 +78,18 @@ async function fetchTokenBalances(walletAddress) {
         return null;
       })
     )).filter(token => token !== null);
+    console.log(tokensWithMetadataAndPrice);
+    console.log(tokensWithMetadataAndPrice.length);
 
-    // Print the length of the json
-    console.log(`Number of tokens: ${tokensWithMetadataAndPrice.length}`);
+    // sum balance of each token
+    let sum = 0;
+    for(let i=0; i<=tokensWithMetadataAndPrice.length-1; i++){
+      console.log(tokensWithMetadataAndPrice[i].priceUsd * tokensWithMetadataAndPrice[i].tokenBalance);
+      let token = tokensWithMetadataAndPrice[i].priceUsd * tokensWithMetadataAndPrice[i].tokenBalance 
+      sum += token
+    }
+    console.log(`Total balance of the token: ${sum}`);
+
 
     // Filter out tokens where the price is not available
     // tokensWithMetadataAndPrice = tokensWithMetadataAndPrice.filter(token => token.priceUsd !== null);
