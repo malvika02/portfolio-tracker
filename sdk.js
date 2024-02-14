@@ -45,7 +45,10 @@ async function fetchTokenBalances(walletAddress) {
 
     // Filter out tokens with zero balance
     // const nonZeroBalances = tokenBalances.tokenBalances.filter(token => BigInt(token.tokenBalance) > 0n);
-
+    
+    // Log the total number of tokens before filtering
+    console.log(`Total number of tokens before filtering: ${tokenBalances.tokenBalances.length}`);
+    
     // Fetch metadata and convert balances for each token with a non-zero balance
     let tokensWithMetadataAndPrice = (await Promise.all(
       tokenBalances.tokenBalances.map(async (token) => {
