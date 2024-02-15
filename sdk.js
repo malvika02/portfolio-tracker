@@ -61,7 +61,13 @@ async function fetchEthBalanceAndUsdValue(walletAddress){
 async function fetchTokenPrice(contractAddress) {
   try {
     
-    const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${contractAddress}`);
+    const response = await fetch(`https://api.dexscreener.com/latest/dex/search/?q=${contractAddress}`);
+    
+    if (!response.ok) {
+      // If the response status is not OK, throw an error or handle it accordingly
+      throw new Error(`API call failed with status: ${response.status} ${response.statusText}`);
+    }
+    
     const data = await response.json();
     if (data && data.pairs && data.pairs.length > 0 && data.pairs[0].priceUsd) {
       // Assuming we take the price from the first pair
