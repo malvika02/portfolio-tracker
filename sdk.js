@@ -61,14 +61,15 @@ async function fetchEthBalanceAndUsdValue(walletAddress){
 async function fetchTokenPrice(contractAddress) {
   try {
     
-    const response = await fetch(`https://api.dexscreener.com/latest/dex/search/?q=${contractAddress}`);
+    const response = await fetch(`https://api.geckoterminal.com/api/v2/networks/eth/tokens/${contractAddress}`, {
+      headers: {
+        'Accept': 'application/json;version=20230302'
+      }
+    });
     
-    if (!response.ok) {
-      // If the response status is not OK, throw an error or handle it accordingly
-      throw new Error(`API call failed with status: ${response.status} ${response.statusText}`);
-    }
     
     const data = await response.json();
+    console.log(`API response for ${contractAddress}:`, data); // Log the API response
     if (data && data.pairs && data.pairs.length > 0 && data.pairs[0].priceUsd) {
       // Assuming we take the price from the first pair
       return data.pairs[0].priceUsd;
@@ -164,7 +165,7 @@ async function fetchTokenBalances(walletAddress) {
 
 // List of wallet addresses to fetch balances for
 const walletAddresses = [
-  '0x28C6c06298d514Db089934071355E5743bf21d60',
+  // '0x28C6c06298d514Db089934071355E5743bf21d60',
   // '0xf89d7b9c864f589bbF53a82105107622B35EaA40',
   // '0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5',
   // ... can add more addresses
