@@ -22,6 +22,41 @@ function convertToReadableBalance(hexBalance, decimals = 18) {
   return decimalBalance / BigInt(10 ** decimals);
 }
 
+//Function to fetch the ETH balance of a wallet in ether
+async function fetchEthBalanceAndUsdValue(walletAddress){
+  try{
+    //used Alchemy sdk t get wallet's balance in Wei (smallest uint of ETH)
+    const balanceWei = await alchemy.core.getBalance(walletAddress);
+    
+    //converts Wei to Ether (1 Ether = 10^18 Wei)
+    const balanceEther = Number(balanceWei) / 1e18;
+
+    //fetches the current price of ETH in USD from an API
+    const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+    const priceData = await response.json();
+    const ethPriceInUsd = priceData.ethereum.usd;
+
+    //calculate the total value of ETH in USD
+    const totalValueInUsd = balanceEther * ethPriceInUsd;
+
+    //Log the results
+    console.log(`ETh Balance for wallet ${walletAddress}: ${balanceEther} ETH`);
+    console.log(`Current ETH Price: ${ethPriceInUsd} USD`);
+    console.log(`Total ETH Value: ${totalValueInUsd.toFixed(2)} USD`);
+
+    //Return the balance and its USD value
+    return{
+      balanceEther: balanceEther,
+      ethPriceInUsd: ethPriceInUsd,
+      totalValueInUsd: totalValueInUsd
+    };
+  }catch (error) {
+    console.error('Error fetching ETH balance and USD value:', error);
+    throw error;
+  }
+ 
+}
+
 // Function to fetch the price of a token using DexScreener API
 async function fetchTokenPrice(contractAddress) {
   try {
@@ -161,22 +196,43 @@ async function promptForAddressAndFetchBalances() {
   for await (const walletAddress of askForWalletAddress()) {
     await fetchTokenBalances(walletAddress);
   }
-  
   // After the above is done, fetch balances for predefined wallet addresses
   await fetchBalancesForPredefinedAddresses();
 }
-
 async function* askForWalletAddress() {
-  yield new Promise((resolve) => {
-    rl.question('Please provide a wallet address: ', (walletAddress) => {
+  yield new Promise(async(resolve) => {
+    rl.question('Please provide a wallet address: ', async(walletAddress) => {
       if (!walletAddress) {
         console.error('No wallet address was provided.');
         rl.close();
         process.exit(1);
+      } else{
+        try{
+          // Fetch the balance in Wei
+        const balanceWei = await alchemy.core.getBalance(walletAddress);
+        // Convert Wei to Ether
+        const balanceEther = Number(balanceWei) / 1e18;
+        // Fetch the current price of ETH in USD
+        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+        const priceData = await response.json();
+        const ethPriceInUsd = priceData.ethereum.usd;
+        // Calculate the total value of ETH in USD
+        const totalValueInUsd = balanceEther * ethPriceInUsd;
+
+        // Display the results
+        console.log(`ETH Balance for wallet ${walletAddress}: ${balanceEther} ETH`);
+        console.log(`Current ETH Price: ${ethPriceInUsd} USD`);
+        console.log(`Total ETH Value: ${totalValueInUsd.toFixed(2)} USD`);
+      } catch (error) {
+        console.error('Error fetching ETH balance and USD value:', error);
       }
+      rl.close();
       resolve(walletAddress);
+        }
+      
+    }); 
     });
-  });
+  
 }
 
 async function fetchBalancesForPredefinedAddresses() {
