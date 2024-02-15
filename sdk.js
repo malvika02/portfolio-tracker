@@ -25,6 +25,7 @@ function convertToReadableBalance(hexBalance, decimals = 18) {
 // Function to fetch the price of a token using DexScreener API
 async function fetchTokenPrice(contractAddress) {
   try {
+    
     const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${contractAddress}`);
     const data = await response.json();
     if (data && data.pairs && data.pairs.length > 0 && data.pairs[0].priceUsd) {
@@ -47,18 +48,17 @@ async function fetchTokenBalances(walletAddress) {
     // const nonZeroBalances = tokenBalances.tokenBalances.filter(token => BigInt(token.tokenBalance) > 0n);
     
     // Initialize tokensWithMetadataAndPrice before using it
-     // Initialize tokensWithMetadataAndPrice before using it
-     
+    let tokensWithMetadataAndPrice = [];
 
     // Log the total number of tokens before filtering
     console.log(`Total number of tokens before filtering: ${tokenBalances.tokenBalances.length}`);
     
     // Print the length of the json
     console.log(`Number of tokens with available price: ${tokensWithMetadataAndPrice.length}`);
-
-
+     
+    
     // Fetch metadata and convert balances for each token with a non-zero balance
-    let tokensWithMetadataAndPrice = (await Promise.all(
+    tokensWithMetadataAndPrice = (await Promise.all(
       tokenBalances.tokenBalances.map(async (token) => {
         const metadata = await alchemy.core.getTokenMetadata(token.contractAddress);
         const readableBalance = convertToReadableBalance(token.tokenBalance, metadata.decimals);
