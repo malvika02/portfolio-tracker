@@ -70,15 +70,25 @@ async function fetchTokenPrice(contractAddress) {
     
     const data = await response.json();
     console.log(`API response for ${contractAddress}:`, data); // Log the API response
-    if (data && data.pairs && data.pairs.length > 0 && data.pairs[0].priceUsd) {
+    if (data && data.pairs && data.pairs.length > 0){
+      const priceUsd = data.pairs[0].priceUsd;
+      const decimals = data.pairs[0].decimals; 
+
+      //total balance price
+      const 
+
+    } 
       // Assuming we take the price from the first pair
       return data.pairs[0].priceUsd;
+      
     }
+   
     return null;
   } catch (error) {
     console.error(`Error fetching price for contract ${contractAddress}:`, error);
     return null;
   }
+  
 }
 
 async function fetchTokenBalances(walletAddress) {
@@ -95,13 +105,11 @@ async function fetchTokenBalances(walletAddress) {
     // Log the total number of tokens before filtering
     console.log(`Total number of tokens before filtering: ${tokenBalances.tokenBalances.length}`);
     
-    // Print the length of the json
-    console.log(`Number of tokens with available price: ${tokensWithMetadataAndPrice.length}`);
-     
-    
     // Fetch metadata and convert balances for each token with a non-zero balance
     tokensWithMetadataAndPrice = (await Promise.all(
       tokenBalances.tokenBalances.map(async (token) => {
+        const priceUsd = await fetchTokenPrice(token.contractAddress);
+        
         const metadata = await alchemy.core.getTokenMetadata(token.contractAddress);
         const readableBalance = convertToReadableBalance(token.tokenBalance, metadata.decimals);
         if(readableBalance > 0){
@@ -113,24 +121,30 @@ async function fetchTokenBalances(walletAddress) {
               name: metadata.name,
               symbol:metadata.symbol,
               decimals: metadata.decimals,
-              priceUsd: priceUsd
+              priceUsd: priceUsd,
+              totalValueUsd: readableBalance * priceUsd
             };
           }
         }
         return null;
       })
     )).filter(token => token !== null);
+
+    // sum balance of each token
+    let countTokensWithPrice = 0;
+    for(let i = 0; i < tokensWithMetadataAndPrice.length-1; i++){
+      if(tokensWithMetadataAndPrice[i].priceUsd) {
+        countTokensWithPrice++;
+      }
+    }
+      console.log(`Number of tokens with available price: ${countTokensWithPrice}`);
+    // Print the length of the json
+    console.log(`Number of tokens with available price: ${tokensWithMetadataAndPrice.length}`);
     console.log(tokensWithMetadataAndPrice);
     console.log(tokensWithMetadataAndPrice.length);
 
-    // sum balance of each token
-    let sum = 0;
-    for(let i=0; i<=tokensWithMetadataAndPrice.length-1; i++){
-      console.log(tokensWithMetadataAndPrice[i].priceUsd * tokensWithMetadataAndPrice[i].tokenBalance);
-      let token = tokensWithMetadataAndPrice[i].priceUsd * tokensWithMetadataAndPrice[i].tokenBalance 
-      sum += token
-    }
-    console.log(`Total balance of the token: ${sum}`);
+ 
+   
 
 
     // Filter out tokens where the price is not available
@@ -152,10 +166,7 @@ async function fetchTokenBalances(walletAddress) {
 
     // Log the total balance
     console.log(`Total Balance for wallet ${walletAddress} in Usd: ${totalBalanceUsd.toFixed(2)}`);
-
     
-
-
     return tokensWithMetadataAndPrice;
   } catch (error) {
     console.error('Error fetching token balances:', error);
@@ -204,7 +215,7 @@ async function promptForAddressAndFetchBalances() {
     await fetchTokenBalances(walletAddress);
   }
   // After the above is done, fetch balances for predefined wallet addresses
-  await fetchBalancesForPredefinedAddresses();
+   await fetchBalancesForPredefinedAddresses();
 }
 async function* askForWalletAddress() {
   yield new Promise(async(resolve) => {
@@ -252,13 +263,11 @@ async function fetchBalancesForPredefinedAddresses() {
 }
 
 // Start the process by prompting for a wallet address
-promptForAddressAndFetchBalances()
-  .then(() => {
+promptForAddressAndFetchBalances().then(() => {
     console.log('Finished fetching balances for all wallets');
     rl.close();
     process.exit(0); // Exit the process when done
-  })
-  .catch(error => {
+  }).catch(error => {
     console.error('Error during balance fetching process', error);
     rl.close();
     process.exit(1); // Exit the process on error
