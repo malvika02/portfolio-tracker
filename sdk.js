@@ -9,7 +9,48 @@ const config = {
   apiKey: process.env.ALCHEMY_API_KEY, // Your Alchemy API key
   network: Network.ETH_MAINNET, // The network want to use
 };
+
+// The Alchemy object returned by new Alchemy() provides access to the Alchemy API. 
 const alchemy = new Alchemy(config);
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
+
+rl.question('Please provide a wallet address: ', async (walletAddress) => {
+  try {
+    // Fetch the list of tokens that the wallet address holds
+    const tokenBalances = await alchemy.core.getTokenBalances(walletAddress);
+
+    // Filter out tokens with zero balance
+    // const nonZeroBalances = tokenBalances.tokenBalances.filter(token => BigInt(token.tokenBalance) > 0n);
+
+    // Fetch and log metadata for each token with a non-zero balance
+    for (const token of tokenBalances.tokenBalances) {
+      const metadata = await alchemy.core.getTokenMetadata(token.contractAddress);
+
+      //Check if the token has 18 decimals (which is standard for many Ethereum-based tokens due to the ERC-20 standard)
+      // if(metadata.decimals === 18){
+      console.log(`Metadata for ${token.contractAddress}:`, metadata);
+
+      //Display the balance for the token
+      console.log(`Balance for token ${token.contractAddress}: ${token.tokenBalance}`);
+      // }
+    }
+  } catch (error) {
+    console.error('Error fetching token balances or metadata:', error);
+  } finally {
+    rl.close();
+  }
+});
+
+
+
+
+
+
+
 
 // Function to convert hexadecimal to decimal
 function hexToDecimal(hexString) {
@@ -57,64 +98,34 @@ async function fetchEthBalanceAndUsdValue(walletAddress){
  
 }
 
-// Function to fetch the price of a token using DexScreener API
-async function fetchTokenPrice(contractAddress) {
-  try {
     
-    const response = await fetch(`https://api.geckoterminal.com/api/v2/networks/eth/tokens/${contractAddress}`, {
-      headers: {
-        'Accept': 'application/json;version=20230302'
-      }
-    });
-    
-    
-    const data = await response.json();
-    console.log(`API response for ${contractAddress}:`, data); // Log the API response
-    if (data && data.pairs && data.pairs.length > 0){
-      const priceUsd = data.pairs[0].priceUsd;
-      const decimals = data.pairs[0].decimals; 
-
-      //total balance price
-      const 
-
-    } 
-      // Assuming we take the price from the first pair
-      return data.pairs[0].priceUsd;
-      
-    }
-   
-    return null;
-  } catch (error) {
-    console.error(`Error fetching price for contract ${contractAddress}:`, error);
-    return null;
-  }
-  
-}
-
-async function fetchTokenBalances(walletAddress) {
+    async function fetchTokenBalances(walletAddress) {
   try {
     // Fetch all token balances for the wallet address
     const tokenBalances = await alchemy.core.getTokenBalances(walletAddress);
 
     // Filter out tokens with zero balance
-    // const nonZeroBalances = tokenBalances.tokenBalances.filter(token => BigInt(token.tokenBalance) > 0n);
+    const nonZeroBalances = tokenBalances.tokenBalances.filter(token => BigInt(token.tokenBalance) > 0n);
     
     // Initialize tokensWithMetadataAndPrice before using it
     let tokensWithMetadataAndPrice = [];
+    let totalBalanceUsd = 0;
 
     // Log the total number of tokens before filtering
     console.log(`Total number of tokens before filtering: ${tokenBalances.tokenBalances.length}`);
+    console.log(`Total number of tokens with non-zero balance: ${nonZeroBalances.length}`);
     
     // Fetch metadata and convert balances for each token with a non-zero balance
     tokensWithMetadataAndPrice = (await Promise.all(
-      tokenBalances.tokenBalances.map(async (token) => {
-        const priceUsd = await fetchTokenPrice(token.contractAddress);
-        
+      nonZeroBalances.map(async (token) => {
         const metadata = await alchemy.core.getTokenMetadata(token.contractAddress);
         const readableBalance = convertToReadableBalance(token.tokenBalance, metadata.decimals);
-        if(readableBalance > 0){
-          const priceUsd = await fetchTokenPrice(token.contractAddress);
-          if(priceUsd){
+        const priceUsd = await fetchTokenPrice(token.contractAddress);
+        // if(readableBalance > 0){
+        //   const priceUsd = await fetchTokenPrice(token.contractAddress);
+          if(priceUsd != null){
+            const totalValueUsd = readableBalance * priceUsd;
+            totalBalanceUsd
             return {
               contractAddress: token.contractAddress,
               tokenBalance: readableBalance.toString(), // Convert to string for readability
@@ -125,19 +136,24 @@ async function fetchTokenBalances(walletAddress) {
               totalValueUsd: readableBalance * priceUsd
             };
           }
-        }
+        
         return null;
       })
     )).filter(token => token !== null);
 
     // sum balance of each token
     let countTokensWithPrice = 0;
+   
     for(let i = 0; i < tokensWithMetadataAndPrice.length-1; i++){
-      if(tokensWithMetadataAndPrice[i].priceUsd) {
+      const token = tokensWithMetadataAndPrice[i];
+      if (token.priceUsd) {
         countTokensWithPrice++;
+        totalBalanceUsd += token.tokenBalance * token.priceUsd;
       }
     }
-      console.log(`Number of tokens with available price: ${countTokensWithPrice}`);
+    console.log(`Number of tokens with available price: ${countTokensWithPrice}`);
+    console.log(`Total Balance for wallet ${walletAddress} in USD: ${totalBalanceUsd.toFixed(2)}`);
+
     // Print the length of the json
     console.log(`Number of tokens with available price: ${tokensWithMetadataAndPrice.length}`);
     console.log(tokensWithMetadataAndPrice);
@@ -151,9 +167,9 @@ async function fetchTokenBalances(walletAddress) {
     // tokensWithMetadataAndPrice = tokensWithMetadataAndPrice.filter(token => token.priceUsd !== null);
     
    // Calculate the total balance in USD for tokens with available prices
-    const totalBalanceUsd = tokensWithMetadataAndPrice.reduce((acc, token) => {
-      return acc + (token.priceUsd ? parseFloat(token.tokenBalance) * parseFloat(token.priceUsd) : 0);
-    }, 0);
+    // const totalBalanceUsd = tokensWithMetadataAndPrice.reduce((acc, token) => {
+    //   return acc + (token.priceUsd ? parseFloat(token.tokenBalance) * parseFloat(token.priceUsd) : 0);
+    // }, 0);
 
     // Log the tokens with metadata and readable balances
     tokensWithMetadataAndPrice.forEach(token => {
@@ -205,10 +221,10 @@ async function fetchBalancesForMultipleWallets(walletAddresses) {
   });
 }
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
+// const rl = readline.createInterface({
+//   input: process.stdin,
+//   output: process.stdout
+// });
 
 async function promptForAddressAndFetchBalances() {
   for await (const walletAddress of askForWalletAddress()) {
