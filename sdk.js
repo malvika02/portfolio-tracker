@@ -36,9 +36,12 @@ async function fetchTokenPrice(contractAddress) {
   return null;
 }
 }
-
 rl.question('Please provide a wallet address: ', async (walletAddress) => {
   try {
+    // Fetch the balance of ETH in Wei
+    const balanceWei = await alchemy.core.getBalance(walletAddress);
+    // Convert Wei to Ether
+    const balanceEther = Number(balanceWei) / 1e18;
     // Fetch the list of tokens that the wallet address holds
     const tokenBalances = await alchemy.core.getTokenBalances(walletAddress);
     
@@ -55,9 +58,13 @@ rl.question('Please provide a wallet address: ', async (walletAddress) => {
       }
       const metadata = await alchemy.core.getTokenMetadata(token.contractAddress);
       const readableBalance = convertToReadableBalance(token.tokenBalance, metadata.decimals);
+      
       if (readableBalance > 0) {
-        //Fetch the token price
-        // const price = await fetchTokenPrice(token.contractAddress);
+        //Calculate the total price of the token
+      const totalPrice = readableBalance * price;
+        // After processing tokens, log the ETH balance
+        console.log(`ETH Balance for wallet ${walletAddress}: ${balanceEther} ETH`);
+
         console.log(`Metadata for ${metadata.name}:`, metadata);
         //Display the contract address for the token
         console.log(`Contract address for ${metadata.name}: ${token.contractAddress}`);
@@ -65,9 +72,9 @@ rl.question('Please provide a wallet address: ', async (walletAddress) => {
         console.log(`Balance for ${metadata.name}: ${readableBalance}`);
         //Display the price of each token
         console.log(`Price: ${price} USD`);
+        //Display the total price of each token
+        console.log(`Total Price: ${totalPrice} USD`);
         console.log(`--------------------------------------------------------------------`);
-          
-      
       }
     }
   //    // After the loop, log the sum of total prices of tokens and add the ETH balance
