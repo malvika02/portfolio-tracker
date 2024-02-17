@@ -1,5 +1,6 @@
 import { Alchemy, Network } from 'alchemy-sdk';
 import { fetchTokenPrice } from './api.js';
+import { fetchEthPriceFromMoralis } from './api.js';
 import dotenv from 'dotenv';
 import readline from 'readline';
 import fetch from 'node-fetch';
@@ -21,28 +22,17 @@ const rl = readline.createInterface({
 
 rl.question('Please provide a wallet address: ', async (walletAddress) => {
   try {
+    // Fetch the balance in Wei
+    const balanceWei = await alchemy.core.getBalance(walletAddress);
+    // Convert Wei to Ether
+    const balanceEther = Number(balanceWei) / 1e18;
+ 
     // Fetch the list of tokens that the wallet address holds
     const tokenBalances = await alchemy.core.getTokenBalances(walletAddress);
-    // Fetch the native token (ETH) balance
-    const balanceWei = await alchemy.core.getBalance(walletAddress);
-    const balanceEther = Number(balanceWei) / 1e18; // Convert Wei to Ether
-
-    // Fetch the current price of ETH in USD from CoinGecko API
-    const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
-    const priceData = await response.json();
-    const ethPriceInUsd = priceData.ethereum.usd;
-
-    // Calculate the total value of ETH in USD
-    const totalEthValueInUsd = balanceEther * ethPriceInUsd;
-
-    // Log the ETH balance and its USD value
-    console.log(`ETH Balance for wallet ${walletAddress}: ${balanceEther} ETH`);
-    console.log(`Current ETH Price: ${ethPriceInUsd} USD`);
-    console.log(`Total ETH Value: ${totalEthValueInUsd.toFixed(2)} USD`);
 
     // Filter out tokens with zero balance
     const nonZeroBalances = tokenBalances.tokenBalances.filter(token => BigInt(token.tokenBalance) > 0n);
-    let sumTotalPrice = totalEthValueInUsd; 
+    let sumTotalPrice = 0; 
     // Fetch and log metadata for each token with a non-zero balance
     for (const token of nonZeroBalances) {
       
@@ -71,8 +61,27 @@ rl.question('Please provide a wallet address: ', async (walletAddress) => {
         }
       }
     }
+     // After the loop, log the sum of total prices of tokens and add the ETH balance
+    console.log(`Total balance in the wallet (tokens): ${sumTotalPrice}`);
+    console.log(`ETH Balance for wallet ${walletAddress}: ${balanceEther} ETH`);
+  // Fetch the price of ETH using the new function from api.js
+  const ethPrice = await fetchEthPriceFromMoralis();
+  let totalValueInUsd = 0;
+  if (ethPrice) {
+    console.log(`ETH Price: ${ethPrice} USD`);
+    // You can now use ethPrice to calculate the total value of ETH in USD
+    totalValueInUsd = balanceEther * ethPrice;
+    console.log(`Total ETH Value: ${totalValueInUsd.toFixed(2)} USD`);
+  }
     // After the loop, log the sum of total prices
     console.log(`Total balance in the wallet: ${sumTotalPrice}`);
+    console.log(`ETH Balance for wallet ${walletAddress}: ${balanceEther} ETH`);
+
+  // Calculate the sum of sumTotalPrice and totalValueInUsd
+  const grandTotal = sumTotalPrice + totalValueInUsd;
+  console.log(`Grand Total balance in the wallet: ${grandTotal.toFixed(2)} USD`);
+
+    
   } catch (error) {
     console.error('Error fetching token balances or metadata:', error);
   } finally {
