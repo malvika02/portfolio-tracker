@@ -1,6 +1,4 @@
 import { Alchemy, Network } from 'alchemy-sdk';
-import { fetchTokenPrice } from './api.js';
-import { fetchEthPriceFromMoralis } from './api.js';
 import dotenv from 'dotenv';
 import readline from 'readline';
 import fetch from 'node-fetch';
@@ -20,187 +18,90 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
+// Function to fetch the price of a token from GeckoTerminal API
+async function fetchTokenPrice(contractAddress) {
+  try {
+  const response = await fetch(`https://api.geckoterminal.com/api/v2/networks/eth/tokens/${contractAddress}`);
+  const json = await response.json();
+  const priceUsd = json.data.attributes.price_usd;
+  return priceUsd || 0; //Return 0 if price_usd is not available
+} catch (error) {
+  console.error('Error fetching token price:', error);
+  return 0;
+  }
+}
+
 rl.question('Please provide a wallet address: ', async (walletAddress) => {
   try {
-    // Fetch the balance in Wei
-    const balanceWei = await alchemy.core.getBalance(walletAddress);
-    // Convert Wei to Ether
-    const balanceEther = Number(balanceWei) / 1e18;
- 
     // Fetch the list of tokens that the wallet address holds
     const tokenBalances = await alchemy.core.getTokenBalances(walletAddress);
-
+    
     // Filter out tokens with zero balance
     const nonZeroBalances = tokenBalances.tokenBalances.filter(token => BigInt(token.tokenBalance) > 0n);
-    let sumTotalPrice = 0; 
+   
     // Fetch and log metadata for each token with a non-zero balance
     for (const token of nonZeroBalances) {
-      
       const metadata = await alchemy.core.getTokenMetadata(token.contractAddress);
-
-      //Check if the token has 18 decimals (which is standard for many Ethereum-based tokens due to the ERC-20 standard)
-      // if(metadata.decimals === 18){
-        const priceData = await fetchTokenPrice(token.contractAddress);
-        if(priceData && priceData.usdPrice) {
-          const readableBalance = convertToReadableBalance(token.tokenBalance, metadata.decimals);
-          if (readableBalance > 0) {
-          const totalPrice = Number(readableBalance) * priceData.usdPrice; 
-          // Add the total price of the current token to the sum
-          sumTotalPrice += totalPrice;
-
-          // Use the usdPrice from priceData
-          console.log(`Metadata for ${metadata.name}:`, metadata);
-          //Display the contract address for the token
-          console.log(`Contract address for ${metadata.name}: ${token.contractAddress}`);
-          //Display the balance for the token
-          console.log(`Balance for ${metadata.name}: ${readableBalance}`);
-          //Display the price of the token
-          console.log(`Price for ${metadata.name} ${token.contractAddress}:`, priceData);
-          console.log(`Total price for ${metadata.name}: ${totalPrice}`);
-          console.log(`--------------------------------------------------------------------`)
+      const readableBalance = convertToReadableBalance(token.tokenBalance, metadata.decimals);
+      if (readableBalance > 0) {
+        //Fetch the token price
+        const price = await fetchTokenPrice(token.contractAddress);
+        console.log(`Metadata for ${metadata.name}:`, metadata);
+        //Display the contract address for the token
+        console.log(`Contract address for ${metadata.name}: ${token.contractAddress}`);
+        //Display the balance for the token
+        console.log(`Balance for ${metadata.name}: ${readableBalance}`);
+        //Display the price of each token
+        console.log(`Price: ${price} USD`);
+        console.log(`--------------------------------------------------------------------`);
+          
         }
       }
-    }
-     // After the loop, log the sum of total prices of tokens and add the ETH balance
-    console.log(`Total balance in the wallet (tokens): ${sumTotalPrice}`);
-    console.log(`ETH Balance for wallet ${walletAddress}: ${balanceEther} ETH`);
-  // Fetch the price of ETH using the new function from api.js
-  const ethPrice = await fetchEthPriceFromMoralis();
-  let totalValueInUsd = 0;
-  if (ethPrice) {
-    console.log(`ETH Price: ${ethPrice} USD`);
-    // You can now use ethPrice to calculate the total value of ETH in USD
-    totalValueInUsd = balanceEther * ethPrice;
-    console.log(`Total ETH Value: ${totalValueInUsd.toFixed(2)} USD`);
-  }
-    // After the loop, log the sum of total prices
-    console.log(`Total balance in the wallet: ${sumTotalPrice}`);
-    console.log(`ETH Balance for wallet ${walletAddress}: ${balanceEther} ETH`);
+  
+  //    // After the loop, log the sum of total prices of tokens and add the ETH balance
+  //    console.log(`Total balance in the wallet (tokens): ${sumTotalPrice}`);
+  //    console.log(`ETH Balance for wallet ${walletAddress}: ${balanceEther} ETH`);
+  
+  // // Calculate the sum of sumTotalPrice and totalValueInUsd
+  // const grandTotal = sumTotalPrice + totalValueInUsd;
+  // console.log(`Grand Total balance in the wallet: ${grandTotal.toFixed(2)} USD`);
 
-  // Calculate the sum of sumTotalPrice and totalValueInUsd
-  const grandTotal = sumTotalPrice + totalValueInUsd;
-  console.log(`Grand Total balance in the wallet: ${grandTotal.toFixed(2)} USD`);
-
-    
   } catch (error) {
     console.error('Error fetching token balances or metadata:', error);
   } finally {
     rl.close();
   }
 });
+
+// Function to convert the token balance to a human-readable format
+function convertToReadableBalance(hexBalance, decimals = 18) {
+  const decimalBalance = hexToDecimal(hexBalance);
+  // Convert BigInt to Number for arithmetic operations with decimals
+  return Number(decimalBalance) / Math.pow(10, decimals);
+}
 // Function to convert hexadecimal to decimal
 function hexToDecimal(hexString) {
   return BigInt(hexString);
 }
-// Function to convert the token balance to a human-readable format
-function convertToReadableBalance(hexBalance, decimals = 18) {
-  const decimalBalance = hexToDecimal(hexBalance);
-  return decimalBalance / BigInt(10 ** decimals);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-//     async function fetchTokenBalances(walletAddress) {
-//   try {
-//     // Fetch all token balances for the wallet address
-//     const tokenBalances = await alchemy.core.getTokenBalances(walletAddress);
-
-//     // Filter out tokens with zero balance
-//     const nonZeroBalances = tokenBalances.tokenBalances.filter(token => BigInt(token.tokenBalance) > 0n);
-    
-//     // Initialize tokensWithMetadataAndPrice before using it
-//     let tokensWithMetadataAndPrice = [];
-//     let totalBalanceUsd = 0;
-
-//     // Log the total number of tokens before filtering
-//     console.log(`Total number of tokens before filtering: ${tokenBalances.tokenBalances.length}`);
-//     console.log(`Total number of tokens with non-zero balance: ${nonZeroBalances.length}`);
-    
-//     // Fetch metadata and convert balances for each token with a non-zero balance
-//     tokensWithMetadataAndPrice = (await Promise.all(
-//       nonZeroBalances.map(async (token) => {
-//         const metadata = await alchemy.core.getTokenMetadata(token.contractAddress);
-//         const readableBalance = convertToReadableBalance(token.tokenBalance, metadata.decimals);
-//         const priceUsd = await fetchTokenPrice(token.contractAddress);
-//         // if(readableBalance > 0){
-//         //   const priceUsd = await fetchTokenPrice(token.contractAddress);
-//           if(priceUsd != null){
-//             const totalValueUsd = readableBalance * priceUsd;
-//             totalBalanceUsd
-//             return {
-//               contractAddress: token.contractAddress,
-//               tokenBalance: readableBalance.toString(), // Convert to string for readability
-//               name: metadata.name,
-//               symbol:metadata.symbol,
-//               decimals: metadata.decimals,
-//               priceUsd: priceUsd,
-//               totalValueUsd: readableBalance * priceUsd
-//             };
-//           }
-        
-//         return null;
-//       })
-//     )).filter(token => token !== null);
-
-//     // sum balance of each token
-//     let countTokensWithPrice = 0;
-   
-//     for(let i = 0; i < tokensWithMetadataAndPrice.length-1; i++){
-//       const token = tokensWithMetadataAndPrice[i];
-//       if (token.priceUsd) {
-//         countTokensWithPrice++;
-//         totalBalanceUsd += token.tokenBalance * token.priceUsd;
-//       }
-//     }
-//     console.log(`Number of tokens with available price: ${countTokensWithPrice}`);
-//     console.log(`Total Balance for wallet ${walletAddress} in USD: ${totalBalanceUsd.toFixed(2)}`);
-
-//     // Print the length of the json
-//     console.log(`Number of tokens with available price: ${tokensWithMetadataAndPrice.length}`);
-//     console.log(tokensWithMetadataAndPrice);
-//     console.log(tokensWithMetadataAndPrice.length);
-
- 
-   
-
-
-//     // Filter out tokens where the price is not available
-//     // tokensWithMetadataAndPrice = tokensWithMetadataAndPrice.filter(token => token.priceUsd !== null);
-    
-//    // Calculate the total balance in USD for tokens with available prices
-//     // const totalBalanceUsd = tokensWithMetadataAndPrice.reduce((acc, token) => {
-//     //   return acc + (token.priceUsd ? parseFloat(token.tokenBalance) * parseFloat(token.priceUsd) : 0);
-//     // }, 0);
-
-//     // Log the tokens with metadata and readable balances
-//     tokensWithMetadataAndPrice.forEach(token => {
-//       console.log(`Token: ${token.name}`);
-//       console.log(`Token Balance: ${token.tokenBalance}`);
-//       console.log(`Token Price (USD): ${token.priceUsd || 'Price not available'}`);
-//       console.log(`Contract Address: ${token.contractAddress}`);
-//       console.log('-----------------------------');
-//     });
-
-//     // Log the total balance
-//     console.log(`Total Balance for wallet ${walletAddress} in Usd: ${totalBalanceUsd.toFixed(2)}`);
-    
-//     return tokensWithMetadataAndPrice;
-//   } catch (error) {
-//     console.error('Error fetching token balances:', error);
-//     throw error;
-//   }
+// // Function to convert the token balance to a human-readable format
+// function convertToReadableBalance(hexBalance, decimals = 18) {
+//   const decimalBalance = hexToDecimal(hexBalance);
+//   return decimalBalance / BigInt(10 ** decimals);
 // }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // // List of wallet addresses to fetch balances for
 // const walletAddresses = [
