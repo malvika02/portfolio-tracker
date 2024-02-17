@@ -23,12 +23,18 @@ async function fetchTokenPrice(contractAddress) {
   try {
   const response = await fetch(`https://api.geckoterminal.com/api/v2/networks/eth/tokens/${contractAddress}`);
   const json = await response.json();
-  const priceUsd = json.data.attributes.price_usd;
-  return priceUsd || 0; //Return 0 if price_usd is not available
+  // Check if 'data' and 'attributes' exist before accessing 'price_usd'
+  if (json && json.data && json.data.attributes && typeof json.data.attributes.price_usd !== 'undefined') {
+    return json.data.attributes.price_usd;
+  } else {
+    // If the structure is not as expected, log the response and return null
+    console.log('Unexpected API response:', json);
+    return null;
+  }
 } catch (error) {
   console.error('Error fetching token price:', error);
-  return 0;
-  }
+  return null;
+}
 }
 
 rl.question('Please provide a wallet address: ', async (walletAddress) => {
@@ -41,11 +47,17 @@ rl.question('Please provide a wallet address: ', async (walletAddress) => {
    
     // Fetch and log metadata for each token with a non-zero balance
     for (const token of nonZeroBalances) {
+      //Fetch the token price first
+      const price = await fetchTokenPrice(token.contractAddress);
+      
+      if(price === null) {
+        continue;
+      }
       const metadata = await alchemy.core.getTokenMetadata(token.contractAddress);
       const readableBalance = convertToReadableBalance(token.tokenBalance, metadata.decimals);
       if (readableBalance > 0) {
         //Fetch the token price
-        const price = await fetchTokenPrice(token.contractAddress);
+        // const price = await fetchTokenPrice(token.contractAddress);
         console.log(`Metadata for ${metadata.name}:`, metadata);
         //Display the contract address for the token
         console.log(`Contract address for ${metadata.name}: ${token.contractAddress}`);
@@ -55,9 +67,9 @@ rl.question('Please provide a wallet address: ', async (walletAddress) => {
         console.log(`Price: ${price} USD`);
         console.log(`--------------------------------------------------------------------`);
           
-        }
+      
       }
-  
+    }
   //    // After the loop, log the sum of total prices of tokens and add the ETH balance
   //    console.log(`Total balance in the wallet (tokens): ${sumTotalPrice}`);
   //    console.log(`ETH Balance for wallet ${walletAddress}: ${balanceEther} ETH`);
@@ -65,7 +77,7 @@ rl.question('Please provide a wallet address: ', async (walletAddress) => {
   // // Calculate the sum of sumTotalPrice and totalValueInUsd
   // const grandTotal = sumTotalPrice + totalValueInUsd;
   // console.log(`Grand Total balance in the wallet: ${grandTotal.toFixed(2)} USD`);
-
+  
   } catch (error) {
     console.error('Error fetching token balances or metadata:', error);
   } finally {
