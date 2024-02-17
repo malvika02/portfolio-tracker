@@ -23,12 +23,29 @@ rl.question('Please provide a wallet address: ', async (walletAddress) => {
   try {
     // Fetch the list of tokens that the wallet address holds
     const tokenBalances = await alchemy.core.getTokenBalances(walletAddress);
+    // Fetch the native token (ETH) balance
+    const balanceWei = await alchemy.core.getBalance(walletAddress);
+    const balanceEther = Number(balanceWei) / 1e18; // Convert Wei to Ether
+
+    // Fetch the current price of ETH in USD from CoinGecko API
+    const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+    const priceData = await response.json();
+    const ethPriceInUsd = priceData.ethereum.usd;
+
+    // Calculate the total value of ETH in USD
+    const totalEthValueInUsd = balanceEther * ethPriceInUsd;
+
+    // Log the ETH balance and its USD value
+    console.log(`ETH Balance for wallet ${walletAddress}: ${balanceEther} ETH`);
+    console.log(`Current ETH Price: ${ethPriceInUsd} USD`);
+    console.log(`Total ETH Value: ${totalEthValueInUsd.toFixed(2)} USD`);
+
     // Filter out tokens with zero balance
-    // const nonZeroBalances = tokenBalances.tokenBalances.filter(token => BigInt(token.tokenBalance) > 0n);
-    let sumTotalPrice = 0; 
+    const nonZeroBalances = tokenBalances.tokenBalances.filter(token => BigInt(token.tokenBalance) > 0n);
+    let sumTotalPrice = totalEthValueInUsd; 
     // Fetch and log metadata for each token with a non-zero balance
-    for (const token of tokenBalances.tokenBalances) {
-      if (BigInt(token.tokenBalance) > 0n) {
+    for (const token of nonZeroBalances) {
+      
       const metadata = await alchemy.core.getTokenMetadata(token.contractAddress);
 
       //Check if the token has 18 decimals (which is standard for many Ethereum-based tokens due to the ERC-20 standard)
@@ -36,6 +53,7 @@ rl.question('Please provide a wallet address: ', async (walletAddress) => {
         const priceData = await fetchTokenPrice(token.contractAddress);
         if(priceData && priceData.usdPrice) {
           const readableBalance = convertToReadableBalance(token.tokenBalance, metadata.decimals);
+          if (readableBalance > 0) {
           const totalPrice = Number(readableBalance) * priceData.usdPrice; 
           // Add the total price of the current token to the sum
           sumTotalPrice += totalPrice;
@@ -49,6 +67,7 @@ rl.question('Please provide a wallet address: ', async (walletAddress) => {
           //Display the price of the token
           console.log(`Price for ${metadata.name} ${token.contractAddress}:`, priceData);
           console.log(`Total price for ${metadata.name}: ${totalPrice}`);
+          console.log(`--------------------------------------------------------------------`)
         }
       }
     }
@@ -81,40 +100,6 @@ function convertToReadableBalance(hexBalance, decimals = 18) {
 
 
 
-//Function to fetch the ETH balance of a wallet in ether
-async function fetchEthBalanceAndUsdValue(walletAddress){
-  try{
-    //used Alchemy sdk t get wallet's balance in Wei (smallest uint of ETH)
-    const balanceWei = await alchemy.core.getBalance(walletAddress);
-    
-    //converts Wei to Ether (1 Ether = 10^18 Wei)
-    const balanceEther = Number(balanceWei) / 1e18;
-
-    //fetches the current price of ETH in USD from an API
-    const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
-    const priceData = await response.json();
-    const ethPriceInUsd = priceData.ethereum.usd;
-
-    //calculate the total value of ETH in USD
-    const totalValueInUsd = balanceEther * ethPriceInUsd;
-
-    //Log the results
-    console.log(`ETh Balance for wallet ${walletAddress}: ${balanceEther} ETH`);
-    console.log(`Current ETH Price: ${ethPriceInUsd} USD`);
-    console.log(`Total ETH Value: ${totalValueInUsd.toFixed(2)} USD`);
-
-    //Return the balance and its USD value
-    return{
-      balanceEther: balanceEther,
-      ethPriceInUsd: ethPriceInUsd,
-      totalValueInUsd: totalValueInUsd
-    };
-  }catch (error) {
-    console.error('Error fetching ETH balance and USD value:', error);
-    throw error;
-  }
- 
-}
 
     
 //     async function fetchTokenBalances(walletAddress) {
