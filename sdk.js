@@ -36,7 +36,6 @@ const rl = readline.createInterface({
 //   return null;
 // }
 // }
-
 async function fetchTokenPrice(contractAddress) {
   try {
     // Replace with the actual Moralis API endpoint for fetching token prices
@@ -55,9 +54,6 @@ async function fetchTokenPrice(contractAddress) {
     return null;
   }
 }
-
-
-
 async function fetchLatestTransaction(walletAddress) {
   try {
     const options = {
@@ -73,6 +69,7 @@ async function fetchLatestTransaction(walletAddress) {
     return null;
   }
 }
+
 rl.question('Please provide a wallet address: ', async (walletAddress) => {
   try {
     // Fetch the balance of ETH in Wei
@@ -111,11 +108,26 @@ rl.question('Please provide a wallet address: ', async (walletAddress) => {
         console.log(`Total Price: ${totalPrice} USD`);
         // Fetch the latest transaction for the wallet address
         let latestTransaction = await fetchLatestTransaction(walletAddress);
-        console.log(`Latest transaction for wallet ${walletAddress}:`, latestTransaction);
+        // console.log(`Latest transaction for wallet ${walletAddress}:`, latestTransaction);
+        // Converting JSON to JS Object
+        
+        const transfers = latestTransaction["transfers"];
+        console.log(transfers);
+        let table = "<table><tr><th>Hash</th><th>From wallet</th><th>To wallet</th><th>Token Name</th><th>Value of Token</th></tr>";
+        for (let i = 0; i < transfers.length; i++) {
+        table += "<tr><td>" + transfer[i].hash + "</td><td>" + transfers[i].from + "</td><td>" + transfers[i].to + "</td><td>" + transfers[i].asset + "</td><td>" + transfers[i].rawContract.value + "</td></tr>";
+      }
+      table += "</table>";
+      // Display the table in the HTML element with id "table-container"
+      document.getElementById("table-container").innerHTML = table;
+
+        
         if (latestTransactionIn || latestTransactionOut) {
+        // It filters out the transactions with assets 'ERC20' and 'NULL' from both incoming and outgoing transactions.
+        latestTransactionIn.transfers = latestTransactionIn.transfers.filter(transfer => transfer.asset !== 'ERC20' && transfer.asset !== 'NULL');
+        latestTransactionOut.transfers = latestTransactionOut.transfers.filter(transfer => transfer.asset !== 'ERC20' && transfer.asset !== 'NULL');
           console.log(typeof latestTransactionIn.transfers);
           console.log(latestTransactionIn.transfers[0], latestTransactionOut.transfers[0]);
-          
           //console.log('Latest transaction:', latestTransaction.transfers);
           // console.log('Latest transaction:', Object.keys(latestTransaction.transfers));
         } else {
