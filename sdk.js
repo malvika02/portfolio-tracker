@@ -40,6 +40,9 @@ async function fetchTokenPrice(contractAddress) {
   try {
     // Replace with the actual Moralis API endpoint for fetching token prices
     const url = `https://deep-index.moralis.io/api/v2/erc20/${contractAddress}/price`;
+    // Explicitly set the contract address for ETH
+    const ethContractAddress = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
+    const url_eth = `https://deep-index.moralis.io/api/v2/erc20/${ethContractAddress}/price`;
     const response = await fetch(url, {
       headers: {
         'X-API-Key': process.env.MORALIS_API_KEY 
@@ -54,6 +57,7 @@ async function fetchTokenPrice(contractAddress) {
     return null;
   }
 }
+
 async function fetchLatestTransaction(walletAddress) {
   try {
     const options = {
@@ -97,7 +101,17 @@ rl.question('Please provide a wallet address: ', async (walletAddress) => {
       const totalPrice = readableBalance * price;
         // After processing tokens, log the ETH balance
         console.log(`ETH Balance for wallet ${walletAddress}: ${balanceEther} ETH`);
+        // Fetch the current price of ETH in USD
+        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+        const priceData = await response.json();
+        const ethPriceInUsd = priceData.ethereum.usd;
+        // Calculate the total value of ETH in USD
+        const totalValueInUsd = balanceEther * ethPriceInUsd;
+        console.log(`Price for eth: ${ethPriceInUsd} `);
+        console.log(`Total Price for eth: ${totalValueInUsd} `);
+        console.log(`...........`);
         console.log(`Metadata for ${metadata.name}:`, metadata);
+        
         //Display the contract address for the token
         console.log(`Contract address for ${metadata.name}: ${token.contractAddress}`);
         //Display the balance for the token
@@ -106,16 +120,18 @@ rl.question('Please provide a wallet address: ', async (walletAddress) => {
         console.log(`Price: ${price} USD`);
         //Display the total price of each token
         console.log(`Total Price: ${totalPrice} USD`);
+        console.log(`...........`);
         // Fetch the latest transaction for the wallet address
         let latestTransaction = await fetchLatestTransaction(walletAddress);
-        // console.log(`Latest transaction for wallet ${walletAddress}:`, latestTransaction);
-        // Converting JSON to JS Object
+        console.log(`Latest transaction for wallet ${walletAddress}:`, latestTransaction);
+
         
+        // Converting JSON to JS Object
         const transfers = latestTransaction["transfers"];
         console.log(transfers);
         let table = "<table><tr><th>Hash</th><th>From wallet</th><th>To wallet</th><th>Token Name</th><th>Value of Token</th></tr>";
         for (let i = 0; i < transfers.length; i++) {
-        table += "<tr><td>" + transfer[i].hash + "</td><td>" + transfers[i].from + "</td><td>" + transfers[i].to + "</td><td>" + transfers[i].asset + "</td><td>" + transfers[i].rawContract.value + "</td></tr>";
+        table += "<tr><td>" + transfers[i].hash + "</td><td>" + transfers[i].from + "</td><td>" + transfers[i].to + "</td><td>" + transfers[i].asset + "</td><td>" + transfers[i].rawContract.value + "</td></tr>";
       }
       table += "</table>";
       // Display the table in the HTML element with id "table-container"
@@ -123,9 +139,6 @@ rl.question('Please provide a wallet address: ', async (walletAddress) => {
 
         
         if (latestTransactionIn || latestTransactionOut) {
-        // It filters out the transactions with assets 'ERC20' and 'NULL' from both incoming and outgoing transactions.
-        latestTransactionIn.transfers = latestTransactionIn.transfers.filter(transfer => transfer.asset !== 'ERC20' && transfer.asset !== 'NULL');
-        latestTransactionOut.transfers = latestTransactionOut.transfers.filter(transfer => transfer.asset !== 'ERC20' && transfer.asset !== 'NULL');
           console.log(typeof latestTransactionIn.transfers);
           console.log(latestTransactionIn.transfers[0], latestTransactionOut.transfers[0]);
           //console.log('Latest transaction:', latestTransaction.transfers);
@@ -150,6 +163,61 @@ rl.question('Please provide a wallet address: ', async (walletAddress) => {
     rl.close();
   }
 });
+
+// async function getWalletDetails(){
+//    const walletAddress=document.getElementById("myTextBox").value;
+
+//        // Fetch the balance of ETH in Wei
+//     const balanceWei = await alchemy.core.getBalance(walletAddress);
+//     // Convert Wei to Ether
+//     const balanceEther = Number(balanceWei) / 1e18;
+//     // Fetch the list of tokens that the wallet address holds
+//     const tokenBalances = await alchemy.core.getTokenBalances(walletAddress);
+//     // Filter out tokens with zero balance
+//     const nonZeroBalances = tokenBalances.tokenBalances.filter(token => BigInt(token.tokenBalance) > 0n);
+   
+//     // Fetch and log metadata for each token with a non-zero balance
+//     for (const token of nonZeroBalances) {
+//       //Fetch the token price first
+//       const price = await fetchTokenPrice(token.contractAddress);
+      
+//       if(price === null) {
+//         continue;
+//       }
+//       const metadata = await alchemy.core.getTokenMetadata(token.contractAddress);
+//       const readableBalance = convertToReadableBalance(token.tokenBalance, metadata.decimals);
+      
+//       if (readableBalance > 0) {
+//         //Calculate the total price of the token
+//       const totalPrice = readableBalance * price;
+//         // After processing tokens, log the ETH balance
+//         console.log(`ETH Balance for wallet ${walletAddress}: ${balanceEther} ETH`);
+//         console.log(`Metadata for ${metadata.name}:`, metadata);
+//         //Display the contract address for the token
+//         console.log(`Contract address for ${metadata.name}: ${token.contractAddress}`);
+//         //Display the balance for the token
+//         console.log(`Balance for ${metadata.name}: ${readableBalance}`);
+//         //Display the price of each token
+//         console.log(`Price: ${price} USD`);
+//         //Display the total price of each token
+//         console.log(`Total Price: ${totalPrice} USD`);
+//         // Fetch the latest transaction for the wallet address
+//         let latestTransaction = await fetchLatestTransaction(walletAddress);
+//         console.log(`Latest transaction for wallet ${walletAddress}:`, latestTransaction);
+        
+//       //   // Converting JSON to JS Object
+//       //   const transfers = latestTransaction["transfers"];
+//       //   console.log(transfers);
+//       //   let table = "<table><tr><th>Hash</th><th>From wallet</th><th>To wallet</th><th>Token Name</th><th>Value of Token</th></tr>";
+//       //   for (let i = 0; i < transfers.length; i++) {
+//       //   table += "<tr><td>" + transfers[i].hash + "</td><td>" + transfers[i].from + "</td><td>" + transfers[i].to + "</td><td>" + transfers[i].asset + "</td><td>" + transfers[i].rawContract.value + "</td></tr>";
+//       // }
+//       // table += "</table>";
+//       // // Display the table in the HTML element with id "table-container"
+//       // document.getElementById("table-container").innerHTML = table;
+//       }
+//     }
+// }
 
 // Function to convert the token balance to a human-readable format
 function convertToReadableBalance(hexBalance, decimals = 18) {
