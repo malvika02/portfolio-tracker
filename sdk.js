@@ -18,23 +18,60 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
-// Function to fetch the price of a token from GeckoTerminal API
+// // Function to fetch the price of a token from GeckoTerminal API
+// async function fetchTokenPrice(contractAddress) {
+//   try {
+//   const response = await fetch(`https://api.geckoterminal.com/api/v2/networks/eth/tokens/${contractAddress}`);
+//   const json = await response.json();
+//   // Check if 'data' and 'attributes' exist before accessing 'price_usd'
+//   if (json && json.data && json.data.attributes && typeof json.data.attributes.price_usd !== 'undefined') {
+//     return json.data.attributes.price_usd;
+//   } else {
+//     // If the structure is not as expected, log the response and return null
+//     console.log('Unexpected API response:', json);
+//     return null;
+//   }
+// } catch (error) {
+//   console.error('Error fetching token price:', error);
+//   return null;
+// }
+// }
+
 async function fetchTokenPrice(contractAddress) {
   try {
-  const response = await fetch(`https://api.geckoterminal.com/api/v2/networks/eth/tokens/${contractAddress}`);
-  const json = await response.json();
-  // Check if 'data' and 'attributes' exist before accessing 'price_usd'
-  if (json && json.data && json.data.attributes && typeof json.data.attributes.price_usd !== 'undefined') {
-    return json.data.attributes.price_usd;
-  } else {
-    // If the structure is not as expected, log the response and return null
-    console.log('Unexpected API response:', json);
+    // Replace with the actual Moralis API endpoint for fetching token prices
+    const url = `https://deep-index.moralis.io/api/v2/erc20/${contractAddress}/price`;
+    const response = await fetch(url, {
+      headers: {
+        'X-API-Key': process.env.MORALIS_API_KEY 
+      }
+    });
+    const json = await response.json();
+    // Access the price from the Moralis response, adjust the path as per the actual response
+    const priceUsd = json.usdPrice; // Replace 'usdPrice' with the correct property from the Moralis response
+    return priceUsd || null;
+  } catch (error) {
+    console.error('Error fetching token price from Moralis:', error);
     return null;
   }
-} catch (error) {
-  console.error('Error fetching token price:', error);
-  return null;
 }
+
+
+
+async function fetchLatestTransaction(walletAddress) {
+  try {
+    const options = {
+      count: 3,
+      order: 'asc',
+      category: ['internal', 'erc20', 'erc721']
+    };
+    const transactionsIn = await alchemy.core.getAssetTransfers({ ...options, toAddress: walletAddress });
+    const transactionsOut = await alchemy.core.getAssetTransfers({ ...options, fromAddress: walletAddress });
+    return transactionsIn, transactionsOut;
+  } catch (error) {
+    console.error('Error fetching the latest transactions:', error);
+    return null;
+  }
 }
 rl.question('Please provide a wallet address: ', async (walletAddress) => {
   try {
@@ -44,7 +81,6 @@ rl.question('Please provide a wallet address: ', async (walletAddress) => {
     const balanceEther = Number(balanceWei) / 1e18;
     // Fetch the list of tokens that the wallet address holds
     const tokenBalances = await alchemy.core.getTokenBalances(walletAddress);
-    
     // Filter out tokens with zero balance
     const nonZeroBalances = tokenBalances.tokenBalances.filter(token => BigInt(token.tokenBalance) > 0n);
    
@@ -64,7 +100,6 @@ rl.question('Please provide a wallet address: ', async (walletAddress) => {
       const totalPrice = readableBalance * price;
         // After processing tokens, log the ETH balance
         console.log(`ETH Balance for wallet ${walletAddress}: ${balanceEther} ETH`);
-
         console.log(`Metadata for ${metadata.name}:`, metadata);
         //Display the contract address for the token
         console.log(`Contract address for ${metadata.name}: ${token.contractAddress}`);
@@ -74,6 +109,18 @@ rl.question('Please provide a wallet address: ', async (walletAddress) => {
         console.log(`Price: ${price} USD`);
         //Display the total price of each token
         console.log(`Total Price: ${totalPrice} USD`);
+        // Fetch the latest transaction for the wallet address
+        let latestTransaction = await fetchLatestTransaction(walletAddress);
+        console.log(`Latest transaction for wallet ${walletAddress}:`, latestTransaction);
+        if (latestTransactionIn || latestTransactionOut) {
+          console.log(typeof latestTransactionIn.transfers);
+          console.log(latestTransactionIn.transfers[0], latestTransactionOut.transfers[0]);
+          
+          //console.log('Latest transaction:', latestTransaction.transfers);
+          // console.log('Latest transaction:', Object.keys(latestTransaction.transfers));
+        } else {
+          console.log('No transactions found for this wallet address.');
+        }
         console.log(`--------------------------------------------------------------------`);
       }
     }
