@@ -4,15 +4,61 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
-    <script src="../sdk.js"></script>
 </head>
 <body>
-    <input type="text" id="myTextBox">
-    <button onclick="getValue()">Get Value</button>
+    <input type="text" id="walletAddress">
+    <button onclick="getWalletData()">Get Details</button>
+    <div id="wallet-data">
+        <h3>Wallet Data</h3>
+        <label for="ethBalance" id="label-ethBalance">eth Balance: </label><br>
+        <label for="ethPriceInUsd" id="label-ethPriceInUsd">Price of eth: </label><br>
+        <label for="totalValueOfEth" id="label-totalValueOfEth">Total Value of Eth: </label><br>
+        <label for="tokenName" id="label-tokenName">Token: </label><br>
+        <label for="tokenAddress" id="label-tokenAddress">Token Address: </label><br>
+        <label for="tokenBalance" id="label-tokenBalance">Token Balance: </label><br>
+        <label for="tokenPrice" id="label-tokenPrice">Token Price: </label><br>
+        <label for="tokenTotalPrice" id="label-tokenTotalPrice">Total Price of Token: </label><br> 
+    </div>
     <div id="table-container"></div>
     
 
 </body>
+
+<script>
+    function getWalletData(){
+        const walletAddress=document.getElementById('walletAddress').value;
+        fetch(`http://localhost:3000/api/fetchWalletDetails?walletAddress=${walletAddress}`)
+            .then(response => response.json())
+            .then(data => {
+                    console.log(data);
+                    if(data!=null)
+                    { 
+                        console.log(data);
+                        const transfers = data.latestTransaction["transfers"];
+                        //console.log(transfers);
+                        let table = "<table><tr><th>Hash</th><th>From wallet</th><th>To wallet</th><th>Token Name</th><th>Value of Token</th></tr>";
+                        for (let i = 0; i < transfers.length; i++) {
+                        table += "<tr><td>" + transfers[i].hash + "</td><td>" + transfers[i].from + "</td><td>" + transfers[i].to + "</td><td>" + transfers[i].asset + "</td><td>" + transfers[i].rawContract.value + "</td></tr>";
+                        }
+                        table += "</table>";
+                        // Display the table in the HTML element with id "table-container"
+                        document.getElementById("table-container").innerHTML = table;
+
+                        const readableBalances=data.readableBalances;
+
+                        for (const key in readableBalances) {
+                            if (Object.hasOwnProperty.call(readableBalances, key)) {
+                                const label = document.getElementById(`label-${key}`);
+                                if (label) {
+                                    label.textContent += readableBalances[key];
+                                }
+                            }
+                        }
+                    }
+            })
+    };
+
+</script>
 
 </html>
 

@@ -2,8 +2,7 @@
   "name": "sdk-tx-history",
   "version": "1.0.0",
   "description": "",
-  "main": "sdk.js",
-  "type": "module",
+  "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -15,6 +14,6 @@
     "alchemy-sdk": "^3.1.2",
     "dotenv": "^16.4.1",
     "express": "^4.18.2",
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^2.7.0"
   }
 }
