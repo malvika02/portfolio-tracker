@@ -6,6 +6,12 @@
     <title>Document</title>
 </head>
 <body>
+    <div style="position: fixed; right: 0; bottom: 0; min-width: 100%; min-height: 100%; z-index: -100;">
+        <video autoplay muted loop style="width: 100%; height: auto;">
+            <source src="https://d1e09wm0wupq53.cloudfront.net/arkham/h265/1.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    </div>
     <input type="text" id="walletAddress">
     <button onclick="getWalletData()">Get Details</button>
     <div id="wallet-data">
@@ -17,7 +23,7 @@
         <label for="tokenAddress" id="label-tokenAddress">Token Address: </label><br>
         <label for="tokenBalance" id="label-tokenBalance">Token Balance: </label><br>
         <label for="tokenPrice" id="label-tokenPrice">Token Price: </label><br>
-        <label for="tokenTotalPrice" id="label-tokenTotalPrice">Total Price of Token: </label><br> 
+        <label for="tokenTotalPrice" id="label-tokenTotalPrice">USD Value: </label><br> 
     </div>
     <div id="table-container"></div>
     
@@ -34,6 +40,7 @@
                     if(data!=null)
                     { 
                         console.log(data);
+                        console.log(data.latestTransaction);
                         const transfers = data.latestTransaction["transfers"];
                         //console.log(transfers);
                         let table = "<table><tr><th>Hash</th><th>From wallet</th><th>To wallet</th><th>Token Name</th><th>Value of Token</th></tr>";
