@@ -18,9 +18,6 @@ async function fetchTokenPrice(contractAddress) {
   try {
     // Replace with the actual Moralis API endpoint for fetching token prices
     const url = `https://deep-index.moralis.io/api/v2/erc20/${contractAddress}/price`;
-    // Explicitly set the contract address for ETH
-    const ethContractAddress = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
-    const url_eth = `https://deep-index.moralis.io/api/v2/erc20/${ethContractAddress}/price`;
     const response = await fetch(url, {
       headers: {
         'X-API-Key': process.env.MORALIS_API_KEY 
@@ -45,18 +42,71 @@ async function fetchLatestTransaction(walletAddress) {
     };
     const transactionsIn = await alchemy.core.getAssetTransfers({ ...options, toAddress: walletAddress });
     const transactionsOut = await alchemy.core.getAssetTransfers({ ...options, fromAddress: walletAddress });
-    return transactionsIn, transactionsOut;
+
+  const In = {
+    ...transactionsIn,
+    transfers: transactionsIn.transfers.filter(transfer => transfer['asset'] !== 'NULL' && transfer['asset'] !== "ERC20")
+  };
+
+  const Out = {
+    ...transactionsOut,
+    transfers: transactionsOut.transfers.filter(transfer => transfer['asset'] !== 'NULL' && transfer['asset'] !== "ERC20")
+  };
+
+  //console.log(JSON.stringify(Out, null, 2));
+    //transactionsIn.transfers = transactionsIn.transfers.filter(transfer => transfer['asset'] !== 'NULL' && transfer['asset'] !== 'ERC20');
+    //transactionsOut.transfers = transactionsOut.transfers.filter(transfer => transfer['asset'] !== 'NULL' && transfer['asset'] !== 'ERC20');
+    //transactionsIn.transfers=transferIn;
+    //transactionsOut.transfers=transferOut;
+    return In, Out;
   } catch (error) {
     console.error('Error fetching the latest transactions:', error);
+
     return null;
   }
 }
+
+// Function to fetch transactions for predefined wallet addresses
+async function fetchTransactionsForPredefinedAddresses(predefinedWalletAddresses) {
+  const transactionsForAllAddresses = [];
+
+  for (const walletAddress of predefinedWalletAddresses) {
+    const transactions = await fetchLatestTransaction(walletAddress);
+
+    const topTransactions = {
+      ...transactions,
+      transfers: transactions.transfers.slice(0,1)
+    };
+
+    //console.log(topTransactions.transfers.length);
+    //const transfers=transactions.transfers.slice(0,1);
+    //transactions.transfers=transfers;
+    if (topTransactions) {
+      transactionsForAllAddresses.push({
+        walletAddress,
+        transactions,
+      });
+    }
+  }
+
+  return transactionsForAllAddresses;
+}
+const predefinedWalletAddresses = [
+  '0x2eB5e5713A874786af6Da95f6E4DEaCEdb5dC246',
+  '0xFa4FC4ec2F81A4897743C5b4f45907c02ce06199',
+  '0x53c902A9EF069F3b85e5e71f918C4D582F3063Fa'
+];
+
+fetchTransactionsForPredefinedAddresses(predefinedWalletAddresses)
+
+  .then(result => console.log(result))
+  .catch(error => console.error(error));
 
 async function getWalletBalances(walletAddress){
   try {
     // Fetch the balance of ETH in Wei
     const balanceWei = await alchemy.core.getBalance(walletAddress);
-
+    
     // Convert Wei to Ether
     const balanceEther = Number(balanceWei) / 1e18;
 
@@ -92,18 +142,17 @@ async function getWalletBalances(walletAddress){
       
       if (readableBalance > 0) {
 
-        //Calculate the total price of the token
+        // Calculate the total price of the token
         const totalPrice = readableBalance * price;
 
-        // Fetch the current price of ETH in USD
-       // const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
-       // console.log(response.json());
-       // const priceData = await response.json();
-       // const ethPriceInUsd = priceData.ethereum.usd;
+      //   // Fetch the current price of ETH in USD
+      //  const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+      //  console.log(response.json());
+      //  const priceData = await response.json();
+      //  const ethPriceInUsd = priceData.ethereum.usd;
 
-        //Calculate the total value of ETH in USD
-       
-        //const totalValueInUsd = balanceEther * ethPriceInUsd;
+      // // Calculate the total value of ETH in USD
+      // const totalValueInUsd = balanceEther * ethPriceInUsd;
 
         readableBalances.ethBalance=balanceEther;
         readableBalances.tokenName=metadata.name;
@@ -112,7 +161,6 @@ async function getWalletBalances(walletAddress){
         readableBalances.tokenPrice=price;
         readableBalances.tokenTotalPrice=totalPrice
   
-        console.log(readableBalances);
         return readableBalances;
       }
     }
@@ -135,6 +183,7 @@ function convertToReadableBalance(hexBalance, decimals = 18) {
 function hexToDecimal(hexString) {
   return BigInt(hexString);
 }
+
 
 module.exports = {
   fetchLatestTransaction,
