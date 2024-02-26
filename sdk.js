@@ -22,6 +22,7 @@ async function fetchTokenPrice(contractAddress) {
       headers: {
         'X-API-Key': process.env.MORALIS_API_KEY 
       }
+      
     });
     const json = await response.json();
     // Access the price from the Moralis response, adjust the path as per the actual response
@@ -172,18 +173,19 @@ async function getWalletBalances(walletAddress){
 };
 
 
-// Function to convert the token balance to a human-readable format
-function convertToReadableBalance(hexBalance, decimals = 18) {
-  const decimalBalance = hexToDecimal(hexBalance);
-  // Convert BigInt to Number for arithmetic operations with decimals
-  return Number(decimalBalance) / Math.pow(10, decimals);
-}
 
 // Function to convert hexadecimal to decimal
 function hexToDecimal(hexString) {
   return BigInt(hexString);
 }
 
+// Function to convert the token balance to a human-readable format
+function convertToReadableBalance(hexBalance, decimals = 18) {
+  const decimalBalance = hexToDecimal(hexBalance);
+
+  // Convert BigInt to Number for arithmetic operations with decimals
+  return Number(decimalBalance) / Math.pow(10, decimals);
+}
 
 module.exports = {
   fetchLatestTransaction,
