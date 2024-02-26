@@ -72,7 +72,7 @@ function getWalletData(walletAddresses){
                     <td>${transfer.from}</td>
                     <td>${transfer.to}</td>
                     <td>${transfer.asset}</td>
-                    <td>${transfer.rawContract.value}</td>
+                    <td>${Number(BigInt(transfer.rawContract.value))}</td>
                 </tr>`;
                 tableBody.innerHTML += row;
 
@@ -84,6 +84,9 @@ function getWalletData(walletAddresses){
         });
     }
 }
+
+
+
 
 
 getWalletData([
